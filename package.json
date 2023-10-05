@@ -1,17 +1,17 @@
 {
   "name": "blabbermouth",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "description": "wip",
   "module": "true",
-  "main": "index.mjs",
+  "main": "src/index.mjs",
   "scripts": {
     "dev": "nodemon src/index.mjs",
     "db:makemigrations": "drizzle-kit generate:sqlite --schema=./src/db/schema.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Juho Jokela",
+  "license": "MIT",
   "dependencies": {
     "@hono/node-server": "^1.2.0",
     "better-sqlite3": "^8.7.0",
