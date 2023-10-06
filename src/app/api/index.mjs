@@ -2,8 +2,10 @@ import { Hono } from "hono";
 import swaggerJSDoc from "swagger-jsdoc";
 
 import { API_VERSION } from "../../config.mjs";
-import configsApi from "./configs/index.mjs";
 import usersApi from "./users/index.mjs";
+import configsApi from "./users/configs/index.mjs";
+import fieldsApi from "./users/configs/fields/index.mjs";
+import passcodesApi from "./users/passcodes/index.mjs";
 
 const api = new Hono();
 
@@ -47,7 +49,9 @@ api.get("/spec.json", (c) => {
   return c.json(spec);
 });
 
-api.route("/configs", configsApi);
 api.route("/users", usersApi);
+api.route("/users/:uid/passcodes", passcodesApi);
+api.route("/users/:uid/configs", configsApi);
+api.route("/users/:uid/configs/:cid/fields", fieldsApi);
 
 export default api;

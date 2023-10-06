@@ -6,10 +6,15 @@ import { users } from "../../../db/schema.mjs";
 
 const usersApi = new Hono();
 
+// TODO: middleware that checks that user that made request
+// is the same user that's resources are requested
+
 /**
  * @openapi
  * /api/v1/users:
  *   get:
+ *     tags:
+ *       - users
  *     description: Get all users.
  *     responses:
  *       200:
@@ -17,7 +22,7 @@ const usersApi = new Hono();
  */
 const getUsers = (c) => {
   const items = db.select().from(users).all();
-  const count = db
+  const aggregates = db
     .select({ count: sql`count(*)` })
     .from(users)
     .all();
@@ -25,7 +30,7 @@ const getUsers = (c) => {
   return c.json(
     {
       items,
-      count,
+      count: aggregates?.[0].count ?? 0,
     },
     200
   );
@@ -35,6 +40,8 @@ const getUsers = (c) => {
  * @openapi
  * /api/v1/users/{id}:
  *   get:
+ *     tags:
+ *       - users
  *     description: Get a user.
  *     parameters:
  *       - name: id
@@ -47,12 +54,12 @@ const getUsers = (c) => {
  */
 const getUser = async (c) => {
   const id = c.req.param("id");
-  const item = await db.select().from(users).where(eq(users.id, id));
+  const items = await db.select().from(users).where(eq(users.id, id));
 
   return c.json(
     {
-      item,
-      count: 1,
+      items,
+      count: items.length,
     },
     200
   );
@@ -62,6 +69,8 @@ const getUser = async (c) => {
  * @openapi
  * /api/v1/users:
  *   post:
+ *     tags:
+ *       - users
  *     description: Create a user.
  *     requestBody:
  *       required: true
@@ -89,6 +98,8 @@ const postUser = async (c) => {
  * @openapi
  * /api/v1/users/{id}:
  *   patch:
+ *     tags:
+ *       - users
  *     description: Update a user.
  *     parameters:
  *       - name: id
@@ -104,17 +115,15 @@ const postUser = async (c) => {
  *             properties:
  *               email:
  *                 type: string
- *               passcode:
- *                 type: string
  *     responses:
  *       204:
  *         $ref: '#/components/responses/NoContent'
  */
 const patchUser = async (c) => {
   const id = c.req.param("id");
-  const { owner_id: ownerId } = c.body;
+  const body = await c.req.json();
 
-  await db.update(users).set({ ownerId }).where(eq(users.id, id));
+  await db.update(users).set({ email: body.email }).where(eq(users.id, id));
 
   return new Response(undefined, { status: 204 });
 };
@@ -123,6 +132,8 @@ const patchUser = async (c) => {
  * @openapi
  * /api/v1/users/{id}:
  *   delete:
+ *     tags:
+ *       - users
  *     description: Delete a user.
  *     parameters:
  *       - name: id

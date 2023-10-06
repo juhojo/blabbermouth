@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { randomInt } from "../util.mjs";
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey(),
@@ -15,9 +16,12 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   configs: many(configs),
 }));
 
+export const PASSCODE_MIN = 1000;
+export const PASSCODE_MAX = 9999;
+
 export const passcodes = sqliteTable("passcodes", {
   id: integer("id").primaryKey(),
-  value: text("value"),
+  value: integer("value").$default(() => randomInt(PASSCODE_MAX, PASSCODE_MIN)),
   userId: integer("user_id").references(() => users.id, {
     onDelete: "cascade",
   }),

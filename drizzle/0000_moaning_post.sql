@@ -8,12 +8,14 @@ CREATE TABLE `configs` (
 CREATE TABLE `fields` (
 	`id` integer PRIMARY KEY NOT NULL,
 	`config_id` integer,
+	`key` text,
+	`value` text,
 	FOREIGN KEY (`config_id`) REFERENCES `configs`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `passcodes` (
 	`id` integer PRIMARY KEY NOT NULL,
-	`value` text,
+	`value` integer,
 	`user_id` integer,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
