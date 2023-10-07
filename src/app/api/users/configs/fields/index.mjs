@@ -10,6 +10,8 @@ const fieldsApi = new Hono();
  * @openapi
  * /api/v1/users/{uid}/configs/{cid}/fields:
  *   get:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - fields
  *     description: Get all fields for a config.
@@ -47,6 +49,8 @@ const getFields = async (c) => {
  * @openapi
  * /api/v1/users/{uid}/configs/{cid}/fields/{id}:
  *   get:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - fields
  *     description: Get a field for a config.
@@ -88,6 +92,8 @@ const getField = async (c) => {
  * @openapi
  * /api/v1/users/{uid}/configs/{cid}/fields:
  *   post:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - fields
  *     description: Create a field.
@@ -132,6 +138,8 @@ const postField = async (c) => {
  * @openapi
  * /api/v1/users/{uid}/configs/{cid}/fields/{id}:
  *   patch:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - fields
  *     description: Update a field.
@@ -178,6 +186,8 @@ const patchField = async (c) => {
  * @openapi
  * /api/v1/users/{uid}/configs/{cid}/fields/{id}:
  *   delete:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - fields
  *     description: Delete a config.

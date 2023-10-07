@@ -1,49 +1,16 @@
 import { Hono } from "hono";
 import { and, desc, eq, sql } from "drizzle-orm";
 
-import db from "../../../../db/index.mjs";
-import { passcodes } from "../../../../db/schema.mjs";
+import { PasscodeModel } from "../../../../db/passcodes/index.mjs";
 
 const passcodesApi = new Hono();
 
 /**
  * @openapi
  * /api/v1/users/{uid}/passcodes:
- *   get:
- *     tags:
- *       - passcodes
- *     description: Get user's latest passcode.
- *     parameters:
- *       - name: uid
- *         in: path
- *         description: User ID.
- *         required: true
- *     responses:
- *       200:
- *         description: Returns a passcode.
- */
-const getLatestPasscode = async (c) => {
-  const uid = c.req.param("uid");
-  const items = await db
-    .select()
-    .from(passcodes)
-    .where(eq(passcodes.userId, uid))
-    .orderBy(desc(passcodes.createdAt))
-    .limit(1);
-
-  return c.json(
-    {
-      items,
-      count: items.length,
-    },
-    200
-  );
-};
-
-/**
- * @openapi
- * /api/v1/users/{uid}/passcodes:
  *   post:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - passcodes
  *     description: Create a passcode.
@@ -59,7 +26,7 @@ const getLatestPasscode = async (c) => {
 const postPasscode = async (c) => {
   const uid = c.req.param("uid");
 
-  await db.insert(passcodes).values({ userId: uid });
+  await PasscodeModel.createRow(uid);
 
   return c.json({}, 201);
 };
@@ -68,6 +35,8 @@ const postPasscode = async (c) => {
  * @openapi
  * /api/v1/users/{uid}/passcodes/{id}:
  *   delete:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - passcodes
  *     description: Delete a passcode.
@@ -88,14 +57,11 @@ const deletePasscode = async (c) => {
   const uid = c.req.param("uid");
   const id = c.req.param("id");
 
-  await db
-    .delete(passcodes)
-    .where(and(eq(passcodes.id, id), eq(passcodes.userId, uid)));
+  await PasscodeModel.deleteRow(id);
 
   return new Response(undefined, { status: 204 });
 };
 
-passcodesApi.get("/", getLatestPasscode);
 passcodesApi.post("/", postPasscode);
 passcodesApi.delete("/:id", deletePasscode);
 

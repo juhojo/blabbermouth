@@ -1,8 +1,5 @@
 import { Hono } from "hono";
-import { eq, sql } from "drizzle-orm";
-
-import db from "../../../db/index.mjs";
-import { users } from "../../../db/schema.mjs";
+import { UserModel } from "../../../db/users/index.mjs";
 
 const usersApi = new Hono();
 
@@ -13,6 +10,8 @@ const usersApi = new Hono();
  * @openapi
  * /api/v1/users:
  *   get:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - users
  *     description: Get all users.
@@ -21,15 +20,12 @@ const usersApi = new Hono();
  *         description: Returns all users.
  */
 const getUsers = (c) => {
-  const items = db.select().from(users).all();
-  const aggregates = db
-    .select({ count: sql`count(*)` })
-    .from(users)
-    .all();
+  const rows = UserModel.getAll();
+  const aggregates = UserModel.getAllAggregates();
 
   return c.json(
     {
-      items,
+      items: rows,
       count: aggregates?.[0].count ?? 0,
     },
     200
@@ -40,6 +36,8 @@ const getUsers = (c) => {
  * @openapi
  * /api/v1/users/{id}:
  *   get:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - users
  *     description: Get a user.
@@ -54,12 +52,12 @@ const getUsers = (c) => {
  */
 const getUser = async (c) => {
   const id = c.req.param("id");
-  const items = await db.select().from(users).where(eq(users.id, id));
+  const rows = await UserModel.getRowsById(id);
 
   return c.json(
     {
-      items,
-      count: items.length,
+      items: rows,
+      count: rows.length,
     },
     200
   );
@@ -69,6 +67,8 @@ const getUser = async (c) => {
  * @openapi
  * /api/v1/users:
  *   post:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - users
  *     description: Create a user.
@@ -89,7 +89,7 @@ const getUser = async (c) => {
 const postUser = async (c) => {
   const body = await c.req.json();
 
-  await db.insert(users).values({ email: body.email });
+  await UserModel.createRow(body.email);
 
   return c.json({}, 201);
 };
@@ -98,6 +98,8 @@ const postUser = async (c) => {
  * @openapi
  * /api/v1/users/{id}:
  *   patch:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - users
  *     description: Update a user.
@@ -123,7 +125,7 @@ const patchUser = async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
 
-  await db.update(users).set({ email: body.email }).where(eq(users.id, id));
+  await UserModel.updateRow(id, body.email);
 
   return new Response(undefined, { status: 204 });
 };
@@ -132,6 +134,8 @@ const patchUser = async (c) => {
  * @openapi
  * /api/v1/users/{id}:
  *   delete:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - users
  *     description: Delete a user.
@@ -147,7 +151,7 @@ const patchUser = async (c) => {
 const deleteUser = async (c) => {
   const id = c.req.param("id");
 
-  await db.delete(users).where(eq(users.id, id));
+  await UserModel.deleteRow(id);
 
   return new Response(undefined, { status: 204 });
 };

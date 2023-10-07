@@ -10,6 +10,8 @@ const configsApi = new Hono();
  * @openapi
  * /api/v1/users/{uid}/configs:
  *   get:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - configs
  *     description: Get all user's configs.
@@ -43,6 +45,8 @@ const getConfigs = async (c) => {
  * @openapi
  * /api/v1/users/{uid}/configs/{id}:
  *   get:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - configs
  *     description: Get a user's config.
@@ -80,6 +84,8 @@ const getConfig = async (c) => {
  * @openapi
  * /api/v1/users/{uid}/configs:
  *   post:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - configs
  *     description: Create a config.
@@ -104,6 +110,8 @@ const postConfig = async (c) => {
  * @openapi
  * /api/v1/users/{uid}/configs/{id}:
  *   delete:
+ *     security:
+ *       - bearerAuth: []
  *     tags:
  *       - configs
  *     description: Delete a config.
