@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import db from "../index.mjs";
-import { passcodes } from "../schema.mjs";
+import { passcodes, users } from "../schema.mjs";
+import { addMinutes, isAfter } from "date-fns";
 
 // TODO: Rename (?)
 export const PasscodeModel = {
@@ -13,6 +14,27 @@ export const PasscodeModel = {
           END;
       `)
     );
+  },
+
+  /**
+   * Is passcode active, or nonexistent or expired
+   *
+   * @param {number} id
+   * @returns {boolean} is passcode active
+   */
+  async isActive(id) {
+    const rows = await db
+      .select({
+        createdAt: passcodes.createdAt,
+      })
+      .from(passcodes)
+      .where(eq(passcodes.id, id));
+
+    if (!rows.length) return false;
+
+    const expiresAt = addMinutes(new Date(rows[0].createdAt), 5);
+
+    return isAfter(expiresAt, new Date());
   },
 
   /**
@@ -42,7 +64,13 @@ export const PasscodeModel = {
    * @returns
    */
   async createRow(userId) {
-    return await db.insert(passcodes).values({ userId }).returning();
+    const rows = await db.insert(passcodes).values({ userId }).returning();
+
+    await db
+      .update(users)
+      .set({ passcodeId: rows[0].id })
+      .where(eq(users.id, userId));
+    return rows;
   },
 
   /**

@@ -5,12 +5,13 @@ import { randomInt } from "../util.mjs";
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey(),
   email: text("email").unique().notNull(),
+  passcodeId: integer("passcode_id"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   passcode: one(passcodes, {
-    fields: [users.passcode],
+    fields: [users.passcodeId],
     references: [passcodes.id],
   }),
   configs: many(configs),

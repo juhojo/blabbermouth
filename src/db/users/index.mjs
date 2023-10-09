@@ -67,6 +67,21 @@ export const UserModel = {
   },
 
   /**
+   * Get rows that match `email`
+   *
+   * @param {string} email
+   * @returns {Promise<User[]>}
+   */
+  async getRowsWithPasscodeByEmail(email) {
+    return await db.query.users.findMany({
+      where: eq(users.email, email),
+      with: {
+        passcode: true,
+      },
+    });
+  },
+
+  /**
    * Create a row
    *
    * @param {string} email

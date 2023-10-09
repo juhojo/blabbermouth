@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
+import { HTTPException } from "hono/http-exception";
 
 import { API_JWT_SECRET } from "../../../config.mjs";
 import { UserModel } from "../../../db/users/index.mjs";
@@ -41,6 +42,8 @@ const auth = async (c) => {
   // Create a passcode
   const passcodeRows = await PasscodeModel.createRow(userRows[0].id);
 
+  console.log(passcodeRows);
+
   // TODO: Send email with passcode to email
   return c.json({}, 200);
 };
@@ -62,14 +65,32 @@ const auth = async (c) => {
  *               email:
  *                 type: string
  *                 required: true
+ *               passcode:
+ *                 type: string
+ *                 required: true
  *     responses:
  *       200:
  *         description: Returns JWT token and expiry time.
  */
 const logIn = async (c) => {
-  const body = c.req.json(); // email and passcode
+  const body = await c.req.json(); // email and passcode
 
-  // TODO: Check passcode validity
+  const userRows = await UserModel.getRowsWithPasscodeByEmail(body.email);
+
+  if (!userRows.length) {
+    throw new HTTPException(401);
+  }
+  console.log(3, userRows);
+
+  if (
+    parseInt(body.passcode, 10) !== userRows[0].passcode.value ||
+    !PasscodeModel.isActive(body.passcode)
+  ) {
+    console.log(4);
+    throw new HTTPException(401);
+  }
+  console.log(5);
+
   // TODO: Fetch user info and set as JWT payload
 
   const token = await sign(

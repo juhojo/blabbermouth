@@ -24,6 +24,7 @@ CREATE TABLE `passcodes` (
 CREATE TABLE `users` (
 	`id` integer PRIMARY KEY NOT NULL,
 	`email` text NOT NULL,
+	`passcode_id` integer,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP
 );
 --> statement-breakpoint
