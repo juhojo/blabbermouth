@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
 import { HTTPException } from "hono/http-exception";
@@ -6,8 +7,17 @@ import { addHours, addSeconds } from "date-fns";
 import { API_JWT_SECRET } from "../../../config.mjs";
 import { UserModel } from "../../../db/users/index.mjs";
 import { PasscodeModel } from "../../../db/passcodes/index.mjs";
+import { parseMiddleware } from "../util.mjs";
 
 const authApi = new Hono();
+
+const parseAuthRequest = async (c, next) => {
+  const bodySchema = z.object({
+    email: z.email(),
+  });
+
+  await parseMiddleware(await c.req.json(), bodySchema, next);
+};
 
 /**
  * @openapi
@@ -42,6 +52,27 @@ const auth = async (c) => {
   return c.json({}, 200);
 };
 
+const parseLoginRequest = async (c, next) => {
+  const bodySchema = z.object({
+    email: z.email(),
+    passcode: z.string().transform((val, ctx) => {
+      const parsed = parseInt(val);
+      if (isNaN(parsed) || parsed < 1000 || parsed > 9999) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Not a valid passcode",
+        });
+
+        return z.NEVER;
+      }
+
+      return parsed;
+    }),
+  });
+
+  await parseMiddleware(await c.req.json(), bodySchema, next);
+};
+
 /**
  * @openapi
  * /api/v1/auth/login:
@@ -71,11 +102,8 @@ const logIn = async (c) => {
 
   const user = await UserModel.getRowWithPasscodeByEmail(email);
 
-  if (!user) {
-    throw new HTTPException(401);
-  }
-
   if (
+    !user ||
     parseInt(passcode, 10) !== user.passcode.value ||
     !PasscodeModel.isActive(passcode)
   ) {
@@ -103,7 +131,9 @@ const logIn = async (c) => {
   );
 };
 
+authApi.use("/", parseAuthRequest);
 authApi.post("/", auth);
+authApi.use("/login", parseLoginRequest);
 authApi.post("/login", logIn);
 
 export default authApi;
