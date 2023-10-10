@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
 import { HTTPException } from "hono/http-exception";
-
+import { createId } from "@paralleldrive/cuid2";
+import { addHours, addSeconds } from "date-fns";
 import { API_JWT_SECRET } from "../../../config.mjs";
 import { UserModel } from "../../../db/users/index.mjs";
 import { PasscodeModel } from "../../../db/passcodes/index.mjs";
@@ -30,19 +31,12 @@ const authApi = new Hono();
  *         $ref: '#/components/responses/EmptyResponse'
  */
 const auth = async (c) => {
-  const body = await c.req.json();
+  const { email } = await c.req.json();
 
-  let userRows = await UserModel.getRowsByEmail(body.email);
+  const user = await UserModel.getOrCreateRow(email);
+  const passcode = await PasscodeModel.createRow(user.id);
 
-  // Create user if not exist
-  if (!userRows.length) {
-    userRows = await UserModel.createRow(body.email);
-  }
-
-  // Create a passcode
-  const passcodeRows = await PasscodeModel.createRow(userRows[0].id);
-
-  console.log(passcodeRows);
+  console.log(passcode);
 
   // TODO: Send email with passcode to email
   return c.json({}, 200);
@@ -73,30 +67,30 @@ const auth = async (c) => {
  *         description: Returns JWT token and expiry time.
  */
 const logIn = async (c) => {
-  const body = await c.req.json(); // email and passcode
+  const { email, passcode } = await c.req.json();
 
-  const userRows = await UserModel.getRowsWithPasscodeByEmail(body.email);
+  const user = await UserModel.getRowWithPasscodeByEmail(email);
 
-  if (!userRows.length) {
+  if (!user) {
     throw new HTTPException(401);
   }
-  console.log(3, userRows);
 
   if (
-    parseInt(body.passcode, 10) !== userRows[0].passcode.value ||
-    !PasscodeModel.isActive(body.passcode)
+    parseInt(passcode, 10) !== user.passcode.value ||
+    !PasscodeModel.isActive(passcode)
   ) {
-    console.log(4);
     throw new HTTPException(401);
   }
-  console.log(5);
 
-  // TODO: Fetch user info and set as JWT payload
+  const nowDate = new Date();
 
   const token = await sign(
     {
-      // TODO: Add jti, exp, nbf and iat claims
-      email: body.email,
+      jti: createId(),
+      iat: nowDate,
+      nbf: addSeconds(nowDate, 10),
+      exp: addHours(nowDate, 2),
+      user,
     },
     API_JWT_SECRET
   );
@@ -104,7 +98,6 @@ const logIn = async (c) => {
   return c.json(
     {
       token,
-      expire: 123456789, // TODO
     },
     200
   );

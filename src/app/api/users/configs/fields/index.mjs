@@ -1,8 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, sql } from "drizzle-orm";
-
-import db from "../../../../../db/index.mjs";
-import { fields } from "../../../../../db/schema.mjs";
+import { FieldModel } from "../../../../../db/fields/index.mjs";
 
 const fieldsApi = new Hono();
 
@@ -29,17 +26,17 @@ const fieldsApi = new Hono();
  *         description: Returns all fields for a config.
  */
 const getFields = async (c) => {
-  const cid = c.req.param("cid");
-  const items = await db.select().from(fields).where(eq(fields.configId, cid));
-  const aggregates = await db
-    .select({ count: sql`count(*)` })
-    .from(fields)
-    .where(eq(fields.configId, cid));
+  const configId = c.req.param("cid");
+
+  const {
+    items,
+    aggregates: { count },
+  } = await FieldModel.getRowsByConfigId(configId);
 
   return c.json(
     {
       items,
-      count: aggregates?.[0].count ?? 0,
+      count,
     },
     200
   );
@@ -72,17 +69,13 @@ const getFields = async (c) => {
  *         description: Returns a field for a config.
  */
 const getField = async (c) => {
-  const cid = c.req.param("cid");
   const id = c.req.param("id");
-  const items = await db
-    .select()
-    .from(fields)
-    .where(and(eq(fields.configId, cid), eq(fields.id, id)));
+
+  const item = await FieldModel.getRowById(id);
 
   return c.json(
     {
-      items,
-      count: items.length,
+      item,
     },
     200
   );
@@ -123,13 +116,9 @@ const getField = async (c) => {
  */
 const postField = async (c) => {
   const cid = c.req.param("cid");
-  const body = await c.req.json();
+  const { key, value } = await c.req.json();
 
-  await db.insert(fields).values({
-    configId: cid,
-    key: body.key,
-    value: body.value,
-  });
+  await FieldModel.createRow(cid, key, value);
 
   return c.json({}, 201);
 };
@@ -170,14 +159,10 @@ const postField = async (c) => {
  *         $ref: '#/components/responses/NoContent'
  */
 const patchField = async (c) => {
-  const cid = c.req.param("cid");
   const id = c.req.param("id");
-  const body = await c.req.json();
+  const { value } = await c.req.json();
 
-  await db
-    .update(fields)
-    .set({ value: body.value })
-    .where(and(eq(fields.configId, cid), eq(fields.id, id)));
+  await FieldModel.updateRow(id, value);
 
   return new Response(undefined, { status: 204 });
 };
@@ -209,12 +194,9 @@ const patchField = async (c) => {
  *         $ref: '#/components/responses/NoContent'
  */
 const deleteField = async (c) => {
-  const cid = c.req.param("cid");
   const id = c.req.param("id");
 
-  await db
-    .delete(fields)
-    .where(and(eq(fields.configId, cid), eq(fields.id, id)));
+  await FieldModel.deleteRow(id);
 
   return new Response(undefined, { status: 204 });
 };

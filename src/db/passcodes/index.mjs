@@ -3,7 +3,6 @@ import db from "../index.mjs";
 import { passcodes, users } from "../schema.mjs";
 import { addMinutes, isAfter } from "date-fns";
 
-// TODO: Rename (?)
 export const PasscodeModel = {
   async createTriggers(db) {
     await db.run(
@@ -23,28 +22,16 @@ export const PasscodeModel = {
    * @returns {boolean} is passcode active
    */
   async isActive(id) {
-    const rows = await db
-      .select({
-        createdAt: passcodes.createdAt,
-      })
-      .from(passcodes)
-      .where(eq(passcodes.id, id));
+    const passcode = await db.query.passcodes.findFirst({
+      columns: { createdAt: true },
+      where: eq(passcodes.id, id),
+    });
 
-    if (!rows.length) return false;
+    if (!passcode) return false;
 
-    const expiresAt = addMinutes(new Date(rows[0].createdAt), 5);
+    const expiresAt = addMinutes(new Date(passcode.createdAt), 5);
 
     return isAfter(expiresAt, new Date());
-  },
-
-  /**
-   * Get rows that match `sql`
-   *
-   * @param {string} sql
-   * @returns {Promise<User[]>}
-   */
-  async getRows(sql) {
-    return await db.select().from(passcodes).where(sql);
   },
 
   /**
@@ -53,8 +40,10 @@ export const PasscodeModel = {
    * @param {number} userId
    * @returns
    */
-  async getRowsByUserId(userId) {
-    return await this.getRows(eq(passcodes.userId, userId));
+  async getRowByUserId(userId) {
+    return await db.query.passcodes.findFirst({
+      where: eq(passcodes.userId, userId),
+    });
   },
 
   /**
@@ -64,13 +53,16 @@ export const PasscodeModel = {
    * @returns
    */
   async createRow(userId) {
-    const rows = await db.insert(passcodes).values({ userId }).returning();
+    const passcode = (
+      await db.insert(passcodes).values({ userId }).returning()
+    )[0];
 
     await db
       .update(users)
-      .set({ passcodeId: rows[0].id })
+      .set({ passcodeId: passcode.id })
       .where(eq(users.id, userId));
-    return rows;
+
+    return passcode;
   },
 
   /**
@@ -80,6 +72,6 @@ export const PasscodeModel = {
    * @returns
    */
   async deleteRow(id) {
-    return await db.delete(passcodes).where(eq(passcodes.id, id));
+    await db.delete(passcodes).where(eq(passcodes.id, id));
   },
 };

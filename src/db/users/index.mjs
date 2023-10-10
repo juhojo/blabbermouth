@@ -2,78 +2,54 @@ import { eq, sql } from "drizzle-orm";
 import db from "../index.mjs";
 import { users } from "../schema.mjs";
 
-/**
- * @typedef User
- * @property {number} id
- * @property {string} email
- * @property {string} createdAt
- *
- * @typedef UserAggregates
- * @property {number} count
- *
- */
-
-// TODO: Rename (?)
 export const UserModel = {
   /**
-   * Get aggregates for all rows
-   *
-   * @returns {UserAggregates[]}
+   * Get all rows
+   * @returns
    */
-  getAllAggregates() {
-    return db
+  getAll() {
+    const rows = db.select().from(users).all();
+    const aggregates = db
       .select({ count: sql`count(*)` })
       .from(users)
       .all();
-  },
 
-  /**
-   * Get all rows
-   *
-   * @returns {User[]}
-   */
-  getAll() {
-    return db.select().from(users).all();
-  },
-
-  /**
-   * Get rows that match `sql`
-   *
-   * @param {string} sql
-   * @returns {Promise<User[]>}
-   */
-  async getRows(sql) {
-    return await db.select().from(users).where(sql);
+    return {
+      rows,
+      aggregates: {
+        count: aggregates?.[0].count ?? 0,
+      },
+    };
   },
 
   /**
    * Get rows that match `id`
    *
    * @param {number} id
-   * @returns {Promise<User[]>}
+   * @returns
    */
-  async getRowsById(id) {
-    return await this.getRows(eq(users.email, id));
+  async getRowById(id) {
+    return await db.query.users.findFirst({ where: eq(users.id, id) });
   },
 
   /**
    * Get rows that match `email`
    *
    * @param {string} email
-   * @returns {Promise<User[]>}
+   * @returns
    */
-  async getRowsByEmail(email) {
-    return await this.getRows(eq(users.email, email));
+  async getRowByEmail(email) {
+    return await db.query.users.findFirst({ where: eq(users.email, email) });
   },
 
   /**
    * Get rows that match `email`
    *
    * @param {string} email
-   * @returns {Promise<User[]>}
+   * @returns
    */
-  async getRowsWithPasscodeByEmail(email) {
-    return await db.query.users.findMany({
+  async getRowWithPasscodeByEmail(email) {
+    return await db.query.users.findFirst({
       where: eq(users.email, email),
       with: {
         passcode: true,
@@ -88,7 +64,25 @@ export const UserModel = {
    * @returns
    */
   async createRow(email) {
-    return await db.insert(users).values({ email }).returning();
+    const user = (await db.insert(users).values({ email }).returning())[0];
+
+    return user;
+  },
+
+  /**
+   * Get a row or create a row
+   *
+   * @param {string} email
+   * @returns
+   */
+  async getOrCreateRow(email) {
+    let user = await this.getRowByEmail(email);
+
+    if (!user) {
+      user = await this.createRow(email);
+    }
+
+    return user;
   },
 
   /**
@@ -109,6 +103,6 @@ export const UserModel = {
    * @returns
    */
   async deleteRow(id) {
-    return await db.delete(users).where(eq(users.id, id));
+    await db.delete(users).where(eq(users.id, id));
   },
 };

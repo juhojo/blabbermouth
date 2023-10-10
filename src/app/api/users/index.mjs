@@ -3,9 +3,6 @@ import { UserModel } from "../../../db/users/index.mjs";
 
 const usersApi = new Hono();
 
-// TODO: middleware that checks that user that made request
-// is the same user that's resources are requested
-
 /**
  * @openapi
  * /api/v1/users:
@@ -20,13 +17,15 @@ const usersApi = new Hono();
  *         description: Returns all users.
  */
 const getUsers = (c) => {
-  const rows = UserModel.getAll();
-  const aggregates = UserModel.getAllAggregates();
+  const {
+    rows,
+    aggregates: { count },
+  } = UserModel.getAll();
 
   return c.json(
     {
       items: rows,
-      count: aggregates?.[0].count ?? 0,
+      count,
     },
     200
   );
@@ -52,12 +51,11 @@ const getUsers = (c) => {
  */
 const getUser = async (c) => {
   const id = c.req.param("id");
-  const rows = await UserModel.getRowsById(id);
+  const user = await UserModel.getRowById(id);
 
   return c.json(
     {
-      items: rows,
-      count: rows.length,
+      item: user,
     },
     200
   );

@@ -1,8 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, sql } from "drizzle-orm";
-
-import db from "../../../../db/index.mjs";
-import { configs } from "../../../../db/schema.mjs";
+import { ConfigModel } from "../../../../db/configs/index.mjs";
 
 const configsApi = new Hono();
 
@@ -25,17 +22,17 @@ const configsApi = new Hono();
  *         description: Returns all configs.
  */
 const getConfigs = async (c) => {
-  const uid = c.req.param("uid");
-  const items = await db.select().from(configs).where(eq(configs.ownerId, uid));
-  const aggregates = await db
-    .select({ count: sql`count(*)` })
-    .from(configs)
-    .where(eq(configs.ownerId, uid));
+  const userId = c.req.param("uid");
+
+  const {
+    rows,
+    aggregates: { count },
+  } = await ConfigModel.getRowsByUserId(userId);
 
   return c.json(
     {
-      items,
-      count: aggregates?.[0].count ?? 0,
+      items: rows,
+      count,
     },
     200
   );
@@ -64,17 +61,12 @@ const getConfigs = async (c) => {
  *         description: Returns a config.
  */
 const getConfig = async (c) => {
-  const uid = c.req.param("uid");
   const id = c.req.param("id");
-  const items = await db
-    .select()
-    .from(configs)
-    .where(and(eq(configs.id, id), eq(configs.ownerId, uid)));
+  const item = await ConfigModel.getRowById(id);
 
   return c.json(
     {
-      items,
-      count: items.length,
+      item,
     },
     200
   );
@@ -101,7 +93,7 @@ const getConfig = async (c) => {
 const postConfig = async (c) => {
   const uid = c.req.param("uid");
 
-  await db.insert(configs).values({ ownerId: uid });
+  await ConfigModel.createRow(uid);
 
   return c.json({}, 201);
 };
@@ -129,12 +121,9 @@ const postConfig = async (c) => {
  *         $ref: '#/components/responses/NoContent'
  */
 const deleteConfig = async (c) => {
-  const uid = c.req.param("uid");
   const id = c.req.param("id");
 
-  await db
-    .delete(configs)
-    .where(and(eq(configs.id, id), eq(configs.ownerId, uid)));
+  await ConfigModel.deleteRow(id);
 
   return new Response(undefined, { status: 204 });
 };

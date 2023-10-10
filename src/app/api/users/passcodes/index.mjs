@@ -1,9 +1,33 @@
 import { Hono } from "hono";
-import { and, desc, eq, sql } from "drizzle-orm";
-
 import { PasscodeModel } from "../../../../db/passcodes/index.mjs";
 
 const passcodesApi = new Hono();
+
+/**
+ * @openapi
+ * /api/v1/users/{uid}/passcodes:
+ *   get:
+ *     security:
+ *       - bearerAuth: []
+ *     tags:
+ *       - passcodes
+ *     description: Get a passcode.
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: User ID.
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Returns a passcode.
+ */
+const getPasscode = async (c) => {
+  const uid = c.req.param("uid");
+
+  const item = await PasscodeModel.getRowByUserId(uid);
+
+  return c.json({ item }, 200);
+};
 
 /**
  * @openapi
@@ -54,7 +78,6 @@ const postPasscode = async (c) => {
  *         $ref: '#/components/responses/NoContent'
  */
 const deletePasscode = async (c) => {
-  const uid = c.req.param("uid");
   const id = c.req.param("id");
 
   await PasscodeModel.deleteRow(id);
@@ -62,6 +85,7 @@ const deletePasscode = async (c) => {
   return new Response(undefined, { status: 204 });
 };
 
+passcodesApi.get("/", getPasscode);
 passcodesApi.post("/", postPasscode);
 passcodesApi.delete("/:id", deletePasscode);
 
