@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { jwt, verify } from "hono/jwt";
 import swaggerJSDoc from "swagger-jsdoc";
 
 import { API_JWT_SECRET, API_VERSION } from "../../config.mjs";
@@ -8,6 +7,8 @@ import usersApi from "./users/index.mjs";
 import configsApi from "./users/configs/index.mjs";
 import fieldsApi from "./users/configs/fields/index.mjs";
 import passcodesApi from "./users/passcodes/index.mjs";
+import { jwt } from "hono/jwt";
+import { authorization } from "./middleware.mjs";
 
 const api = new Hono();
 
@@ -58,21 +59,14 @@ api.get("/spec.json", (c) => {
 
 api.route("/auth", authApi);
 
-api.use(
-  "/users/*",
-  jwt({
-    secret: API_JWT_SECRET,
-  })
-);
-
-api.use("/users/*", async (c, next) => {
-  const bearer = c.req.header("Authorization");
-  const decodedToken = await verify(bearer.split("Bearer ")[1], API_JWT_SECRET);
-
-  // TODO: Get user info and mutate request object to include it
-  console.log(decodedToken);
-  next();
-});
+api
+  .use(
+    "/users/:uid/*",
+    jwt({
+      secret: API_JWT_SECRET,
+    })
+  )
+  .use(authorization);
 
 api.route("/users", usersApi);
 api.route("/users/:uid/passcodes", passcodesApi);

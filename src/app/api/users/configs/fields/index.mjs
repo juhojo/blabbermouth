@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { FieldModel } from "../../../../../db/fields/index.mjs";
+import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
+import { idSchema } from "../../../schema.mjs";
 
 const fieldsApi = new Hono();
 
@@ -25,13 +28,15 @@ const fieldsApi = new Hono();
  *       200:
  *         description: Returns all fields for a config.
  */
+
+/** @param {import('hono').Context} c  */
 const getFields = async (c) => {
-  const configId = c.req.param("cid");
+  const { cid } = c.req.valid("param");
 
   const {
     items,
     aggregates: { count },
-  } = await FieldModel.getRowsByConfigId(configId);
+  } = await FieldModel.getRowsByConfigId(cid);
 
   return c.json(
     {
@@ -44,7 +49,7 @@ const getFields = async (c) => {
 
 /**
  * @openapi
- * /api/v1/users/{uid}/configs/{cid}/fields/{id}:
+ * /api/v1/users/{uid}/configs/{cid}/fields/{fid}:
  *   get:
  *     security:
  *       - bearerAuth: []
@@ -60,7 +65,7 @@ const getFields = async (c) => {
  *         in: path
  *         description: Config ID.
  *         required: true
- *       - name: id
+ *       - name: fid
  *         in: path
  *         description: Field ID.
  *         required: true
@@ -68,10 +73,12 @@ const getFields = async (c) => {
  *       200:
  *         description: Returns a field for a config.
  */
-const getField = async (c) => {
-  const id = c.req.param("id");
 
-  const item = await FieldModel.getRowById(id);
+/** @param {import('hono').Context} c  */
+const getField = async (c) => {
+  const { fid } = c.req.valid("param");
+
+  const item = await FieldModel.getRowById(fid);
 
   return c.json(
     {
@@ -114,9 +121,16 @@ const getField = async (c) => {
  *       201:
  *         $ref: '#/components/responses/EmptyResponse'
  */
+
+const postFieldBodySchema = z.object({
+  key: z.string().regex(/[a-zA-Z0-9_]/),
+  value: z.string(),
+});
+
+/** @param {import('hono').Context} c  */
 const postField = async (c) => {
-  const cid = c.req.param("cid");
-  const { key, value } = await c.req.json();
+  const { cid } = c.req.valid("param");
+  const { key, value } = await c.req.valid("json");
 
   await FieldModel.createRow(cid, key, value);
 
@@ -125,7 +139,7 @@ const postField = async (c) => {
 
 /**
  * @openapi
- * /api/v1/users/{uid}/configs/{cid}/fields/{id}:
+ * /api/v1/users/{uid}/configs/{cid}/fields/{fid}:
  *   patch:
  *     security:
  *       - bearerAuth: []
@@ -141,7 +155,7 @@ const postField = async (c) => {
  *         in: path
  *         description: Config ID.
  *         required: true
- *       - name: id
+ *       - name: fid
  *         in: path
  *         description: Field ID.
  *         required: true
@@ -158,18 +172,24 @@ const postField = async (c) => {
  *       204:
  *         $ref: '#/components/responses/NoContent'
  */
-const patchField = async (c) => {
-  const id = c.req.param("id");
-  const { value } = await c.req.json();
 
-  await FieldModel.updateRow(id, value);
+const patchFieldBodySchema = z.object({
+  value: z.string(),
+});
+
+/** @param {import('hono').Context} c  */
+const patchField = async (c) => {
+  const { fid } = c.req.valid("param");
+  const { value } = c.req.valid("json");
+
+  await FieldModel.updateRow(fid, value);
 
   return new Response(undefined, { status: 204 });
 };
 
 /**
  * @openapi
- * /api/v1/users/{uid}/configs/{cid}/fields/{id}:
+ * /api/v1/users/{uid}/configs/{cid}/fields/{fid}:
  *   delete:
  *     security:
  *       - bearerAuth: []
@@ -185,7 +205,7 @@ const patchField = async (c) => {
  *         in: path
  *         description: Config ID.
  *         required: true
- *       - name: id
+ *       - name: fid
  *         in: path
  *         description: Field ID.
  *         required: true
@@ -193,18 +213,32 @@ const patchField = async (c) => {
  *       204:
  *         $ref: '#/components/responses/NoContent'
  */
+
+/** @param {import('hono').Context} c  */
 const deleteField = async (c) => {
-  const id = c.req.param("id");
+  const { fid } = c.req.valid("param");
 
   await FieldModel.deleteRow(id);
 
   return new Response(undefined, { status: 204 });
 };
 
+const fieldsParamsSchema = z.object({
+  uid: idSchema,
+  cid: idSchema,
+});
+
+const fieldParamsSchema = fieldsParamsSchema.extend({
+  fid: idSchema,
+});
+
+fieldsApi.use("/", zValidator(fieldsParamsSchema));
 fieldsApi.get("/", getFields);
-fieldsApi.get("/:id", getField);
-fieldsApi.post("/", postField);
-fieldsApi.patch("/:id", patchField);
-fieldsApi.delete("/:id", deleteField);
+fieldsApi.post("/", zValidator(postFieldBodySchema), postField);
+
+fieldsApi.use("/:fid", zValidator(fieldParamsSchema));
+fieldsApi.get("/:fid", getField);
+fieldsApi.patch("/:fid", zValidator(patchFieldBodySchema), patchField);
+fieldsApi.delete("/:fid", deleteField);
 
 export default fieldsApi;

@@ -4,20 +4,14 @@ import { sign } from "hono/jwt";
 import { HTTPException } from "hono/http-exception";
 import { createId } from "@paralleldrive/cuid2";
 import { addHours, addSeconds } from "date-fns";
+
 import { API_JWT_SECRET } from "../../../config.mjs";
 import { UserModel } from "../../../db/users/index.mjs";
 import { PasscodeModel } from "../../../db/passcodes/index.mjs";
-import { parseMiddleware } from "../util.mjs";
+import { PASSCODE_MAX, PASSCODE_MIN } from "../../../db/schema.mjs";
+import { zValidator } from "@hono/zod-validator";
 
 const authApi = new Hono();
-
-const parseAuthRequest = async (c, next) => {
-  const bodySchema = z.object({
-    email: z.email(),
-  });
-
-  await parseMiddleware(await c.req.json(), bodySchema, next);
-};
 
 /**
  * @openapi
@@ -40,8 +34,14 @@ const parseAuthRequest = async (c, next) => {
  *       200:
  *         $ref: '#/components/responses/EmptyResponse'
  */
+
+const authBodySchema = z.object({
+  email: z.string().email(),
+});
+
+/** @param {import('hono').Context} c  */
 const auth = async (c) => {
-  const { email } = await c.req.json();
+  const { email } = c.req.valid("json");
 
   const user = await UserModel.getOrCreateRow(email);
   const passcode = await PasscodeModel.createRow(user.id);
@@ -50,27 +50,6 @@ const auth = async (c) => {
 
   // TODO: Send email with passcode to email
   return c.json({}, 200);
-};
-
-const parseLoginRequest = async (c, next) => {
-  const bodySchema = z.object({
-    email: z.email(),
-    passcode: z.string().transform((val, ctx) => {
-      const parsed = parseInt(val);
-      if (isNaN(parsed) || parsed < 1000 || parsed > 9999) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Not a valid passcode",
-        });
-
-        return z.NEVER;
-      }
-
-      return parsed;
-    }),
-  });
-
-  await parseMiddleware(await c.req.json(), bodySchema, next);
 };
 
 /**
@@ -91,14 +70,22 @@ const parseLoginRequest = async (c, next) => {
  *                 type: string
  *                 required: true
  *               passcode:
- *                 type: string
+ *                 type: integer
+ *                 format: int32
  *                 required: true
  *     responses:
  *       200:
  *         description: Returns JWT token and expiry time.
  */
+
+const logInBodySchema = z.object({
+  email: z.string().email(),
+  passcode: z.number().int().min(PASSCODE_MIN).max(PASSCODE_MAX),
+});
+
+/** @param {import('hono').Context} c  */
 const logIn = async (c) => {
-  const { email, passcode } = await c.req.json();
+  const { email, passcode } = c.req.valid("json");
 
   const user = await UserModel.getRowWithPasscodeByEmail(email);
 
@@ -110,14 +97,16 @@ const logIn = async (c) => {
     throw new HTTPException(401);
   }
 
+  // TODO: Move all this JWT stuff to elsewhere
   const nowDate = new Date();
+  const exp = addHours(nowDate, 2);
 
   const token = await sign(
     {
       jti: createId(),
       iat: nowDate,
       nbf: addSeconds(nowDate, 10),
-      exp: addHours(nowDate, 2),
+      exp,
       user,
     },
     API_JWT_SECRET
@@ -126,14 +115,13 @@ const logIn = async (c) => {
   return c.json(
     {
       token,
+      exp,
     },
     200
   );
 };
 
-authApi.use("/", parseAuthRequest);
-authApi.post("/", auth);
-authApi.use("/login", parseLoginRequest);
-authApi.post("/login", logIn);
+authApi.post("/", zValidator("json", authBodySchema), auth);
+authApi.post("/login", zValidator("json", logInBodySchema), logIn);
 
 export default authApi;

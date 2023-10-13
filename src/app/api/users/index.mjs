@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { UserModel } from "../../../db/users/index.mjs";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
+import { idSchema } from "../schema.mjs";
 
 const usersApi = new Hono();
 
@@ -16,6 +19,8 @@ const usersApi = new Hono();
  *       200:
  *         description: Returns all users.
  */
+
+/** @param {import('hono').Context} c  */
 const getUsers = (c) => {
   const {
     rows,
@@ -26,36 +31,6 @@ const getUsers = (c) => {
     {
       items: rows,
       count,
-    },
-    200
-  );
-};
-
-/**
- * @openapi
- * /api/v1/users/{id}:
- *   get:
- *     security:
- *       - bearerAuth: []
- *     tags:
- *       - users
- *     description: Get a user.
- *     parameters:
- *       - name: id
- *         in: path
- *         description: User ID.
- *         required: true
- *     responses:
- *       200:
- *         description: Returns a user.
- */
-const getUser = async (c) => {
-  const id = c.req.param("id");
-  const user = await UserModel.getRowById(id);
-
-  return c.json(
-    {
-      item: user,
     },
     200
   );
@@ -84,17 +59,55 @@ const getUser = async (c) => {
  *       201:
  *         $ref: '#/components/responses/EmptyResponse'
  */
-const postUser = async (c) => {
-  const body = await c.req.json();
 
-  await UserModel.createRow(body.email);
+const postUserBodySchema = z.object({
+  email: z.string().email(),
+});
+
+/** @param {import('hono').Context} c  */
+const postUser = async (c) => {
+  const { email } = c.req.valid("json");
+
+  await UserModel.createRow(email);
 
   return c.json({}, 201);
 };
 
 /**
  * @openapi
- * /api/v1/users/{id}:
+ * /api/v1/users/{uid}:
+ *   get:
+ *     security:
+ *       - bearerAuth: []
+ *     tags:
+ *       - users
+ *     description: Get a user.
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: User ID.
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Returns a user.
+ */
+
+/** @param {import('hono').Context} c  */
+const getUser = async (c) => {
+  const { uid } = c.req.valid("param");
+  const user = await UserModel.getRowById(uid);
+
+  return c.json(
+    {
+      item: user,
+    },
+    200
+  );
+};
+
+/**
+ * @openapi
+ * /api/v1/users/{uid}:
  *   patch:
  *     security:
  *       - bearerAuth: []
@@ -102,7 +115,7 @@ const postUser = async (c) => {
  *       - users
  *     description: Update a user.
  *     parameters:
- *       - name: id
+ *       - name: uid
  *         in: path
  *         description: User ID.
  *         required: true
@@ -118,19 +131,26 @@ const postUser = async (c) => {
  *     responses:
  *       204:
  *         $ref: '#/components/responses/NoContent'
+ *
  */
-const patchUser = async (c) => {
-  const id = c.req.param("id");
-  const body = await c.req.json();
 
-  await UserModel.updateRow(id, body.email);
+const patchUserBodySchema = z.object({
+  email: z.string().email(),
+});
+
+/** @param {import('hono').Context} c  */
+const patchUser = async (c) => {
+  const { uid } = c.req.valid("param");
+  const { email } = c.req.valid("json");
+
+  await UserModel.updateRow(uid, email);
 
   return new Response(undefined, { status: 204 });
 };
 
 /**
  * @openapi
- * /api/v1/users/{id}:
+ * /api/v1/users/{uid}:
  *   delete:
  *     security:
  *       - bearerAuth: []
@@ -138,7 +158,7 @@ const patchUser = async (c) => {
  *       - users
  *     description: Delete a user.
  *     parameters:
- *       - name: id
+ *       - name: uid
  *         in: path
  *         description: User ID.
  *         required: true
@@ -146,18 +166,27 @@ const patchUser = async (c) => {
  *       204:
  *         $ref: '#/components/responses/NoContent'
  */
-const deleteUser = async (c) => {
-  const id = c.req.param("id");
 
-  await UserModel.deleteRow(id);
+/** @param {import('hono').Context} c  */
+const deleteUser = async (c) => {
+  const { uid } = c.req.valid("param");
+
+  await UserModel.deleteRow(uid);
 
   return new Response(undefined, { status: 204 });
 };
 
+const userParamsSchema = z.object({
+  uid: idSchema,
+});
+
+// TODO: Move these two as /admin/ endpoints
 usersApi.get("/", getUsers);
-usersApi.get("/:id", getUser);
-usersApi.post("/", postUser);
-usersApi.patch("/:id", patchUser);
-usersApi.delete("/:id", deleteUser);
+usersApi.post("/", zValidator("json", postUserBodySchema), postUser);
+
+usersApi.use("/:uid", zValidator("param", userParamsSchema));
+usersApi.get("/:uid", getUser);
+usersApi.patch("/:uid", zValidator("json", patchUserBodySchema), patchUser);
+usersApi.delete("/:uid", deleteUser);
 
 export default usersApi;

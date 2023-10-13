@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { PasscodeModel } from "../../../../db/passcodes/index.mjs";
+import { zValidator } from "@hono/zod-validator";
+import { idSchema } from "../../schema.mjs";
+import { z } from "zod";
 
 const passcodesApi = new Hono();
 
@@ -21,8 +24,10 @@ const passcodesApi = new Hono();
  *       200:
  *         description: Returns a passcode.
  */
+
+/** @param {import('hono').Context} c  */
 const getPasscode = async (c) => {
-  const uid = c.req.param("uid");
+  const { uid } = c.req.valid("param");
 
   const item = await PasscodeModel.getRowByUserId(uid);
 
@@ -47,8 +52,10 @@ const getPasscode = async (c) => {
  *       201:
  *         $ref: '#/components/responses/EmptyResponse'
  */
+
+/** @param {import('hono').Context} c  */
 const postPasscode = async (c) => {
-  const uid = c.req.param("uid");
+  const { uid } = c.req.valid("param");
 
   await PasscodeModel.createRow(uid);
 
@@ -57,7 +64,7 @@ const postPasscode = async (c) => {
 
 /**
  * @openapi
- * /api/v1/users/{uid}/passcodes/{id}:
+ * /api/v1/users/{uid}/passcodes/{pid}:
  *   delete:
  *     security:
  *       - bearerAuth: []
@@ -69,7 +76,7 @@ const postPasscode = async (c) => {
  *         in: path
  *         description: User ID.
  *         required: true
- *       - name: id
+ *       - name: pid
  *         in: path
  *         description: Passcode ID.
  *         required: true
@@ -77,16 +84,29 @@ const postPasscode = async (c) => {
  *       204:
  *         $ref: '#/components/responses/NoContent'
  */
-const deletePasscode = async (c) => {
-  const id = c.req.param("id");
 
-  await PasscodeModel.deleteRow(id);
+/** @param {import('hono').Context} c  */
+const deletePasscode = async (c) => {
+  const { pid } = c.req.valid("param");
+
+  await PasscodeModel.deleteRow(pid);
 
   return new Response(undefined, { status: 204 });
 };
 
+const passcodesParamsSchema = z.object({
+  uid: idSchema,
+});
+
+const passcodeParamsSchema = passcodesParamsSchema.extend({
+  pid: idSchema,
+});
+
+passcodesApi.use("/", zValidator("param", passcodesParamsSchema));
 passcodesApi.get("/", getPasscode);
 passcodesApi.post("/", postPasscode);
-passcodesApi.delete("/:id", deletePasscode);
+
+passcodesApi.use("/:pid", zValidator("param", passcodeParamsSchema));
+passcodesApi.delete("/:pid", deletePasscode);
 
 export default passcodesApi;

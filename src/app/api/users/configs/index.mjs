@@ -1,5 +1,8 @@
 import { Hono } from "hono";
 import { ConfigModel } from "../../../../db/configs/index.mjs";
+import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
+import { idSchema } from "../../schema.mjs";
 
 const configsApi = new Hono();
 
@@ -21,13 +24,15 @@ const configsApi = new Hono();
  *       200:
  *         description: Returns all configs.
  */
+
+/** @param {import('hono').Context} c  */
 const getConfigs = async (c) => {
-  const userId = c.req.param("uid");
+  const { uid } = c.req.valid("param");
 
   const {
     rows,
     aggregates: { count },
-  } = await ConfigModel.getRowsByUserId(userId);
+  } = await ConfigModel.getRowsByUserId(uid);
 
   return c.json(
     {
@@ -52,7 +57,7 @@ const getConfigs = async (c) => {
  *         in: path
  *         description: User ID.
  *         required: true
- *       - name: id
+ *       - name: cid
  *         in: path
  *         description: Config ID.
  *         required: true
@@ -60,9 +65,11 @@ const getConfigs = async (c) => {
  *       200:
  *         description: Returns a config.
  */
+
+/** @param {import('hono').Context} c  */
 const getConfig = async (c) => {
-  const id = c.req.param("id");
-  const item = await ConfigModel.getRowById(id);
+  const { cid } = c.req.valid("param");
+  const item = await ConfigModel.getRowById(cid);
 
   return c.json(
     {
@@ -90,8 +97,10 @@ const getConfig = async (c) => {
  *       201:
  *         $ref: '#/components/responses/EmptyResponse'
  */
+
+/** @param {import('hono').Context} c  */
 const postConfig = async (c) => {
-  const uid = c.req.param("uid");
+  const { uid } = c.req.valid("param");
 
   await ConfigModel.createRow(uid);
 
@@ -112,7 +121,7 @@ const postConfig = async (c) => {
  *         in: path
  *         description: User ID.
  *         required: true
- *       - name: id
+ *       - name: cid
  *         in: path
  *         description: Config ID.
  *         required: true
@@ -120,17 +129,30 @@ const postConfig = async (c) => {
  *       204:
  *         $ref: '#/components/responses/NoContent'
  */
-const deleteConfig = async (c) => {
-  const id = c.req.param("id");
 
-  await ConfigModel.deleteRow(id);
+/** @param {import('hono').Context} c  */
+const deleteConfig = async (c) => {
+  const { cid } = c.req.valid("param");
+
+  await ConfigModel.deleteRow(cid);
 
   return new Response(undefined, { status: 204 });
 };
 
+const configsParamsSchema = z.object({
+  uid: idSchema,
+});
+
+const configParamsSchema = configsParamsSchema.extend({
+  cid: idSchema,
+});
+
+configsApi.use("/", zValidator(configsParamsSchema));
 configsApi.get("/", getConfigs);
-configsApi.get("/:id", getConfig);
 configsApi.post("/", postConfig);
-configsApi.delete("/:id", deleteConfig);
+
+configsApi.use("/:cid", zValidator(configParamsSchema));
+configsApi.get("/:cid", getConfig);
+configsApi.delete("/:cid", deleteConfig);
 
 export default configsApi;
