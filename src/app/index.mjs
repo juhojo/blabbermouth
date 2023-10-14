@@ -13,7 +13,12 @@ app.use("*", poweredBy());
 app.use("*", logger());
 
 app.route(`/api/${API_VERSION}`, api);
-app.use("/swagger/*", serveStatic({ root: "./" }));
+app.use(
+  "/api/swagger/*",
+  serveStatic({
+    root: "./src/app/",
+  })
+);
 
 serve({
   fetch: app.fetch,
