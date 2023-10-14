@@ -1,14 +1,9 @@
 import { Hono } from "hono";
 import swaggerJSDoc from "swagger-jsdoc";
 
-import { API_JWT_SECRET, API_VERSION } from "../../config.mjs";
+import { API_VERSION } from "../../config.mjs";
 import authApi from "./auth/index.mjs";
 import usersApi from "./users/index.mjs";
-import configsApi from "./users/configs/index.mjs";
-import fieldsApi from "./users/configs/fields/index.mjs";
-import passcodesApi from "./users/passcodes/index.mjs";
-import { jwt } from "hono/jwt";
-import { authorization } from "./middleware.mjs";
 
 const api = new Hono();
 
@@ -58,19 +53,6 @@ api.get("/spec.json", (c) => {
 });
 
 api.route("/auth", authApi);
-
-api
-  .use(
-    "/users/:uid/*",
-    jwt({
-      secret: API_JWT_SECRET,
-    })
-  )
-  .use(authorization);
-
 api.route("/users", usersApi);
-api.route("/users/:uid/passcodes", passcodesApi);
-api.route("/users/:uid/configs", configsApi);
-api.route("/users/:uid/configs/:cid/fields", fieldsApi);
 
 export default api;

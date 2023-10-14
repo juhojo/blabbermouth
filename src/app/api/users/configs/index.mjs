@@ -1,8 +1,10 @@
 import { Hono } from "hono";
-import { ConfigModel } from "../../../../db/configs/index.mjs";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
+
+import { ConfigModel } from "../../../../db/configs/index.mjs";
 import { idSchema } from "../../schema.mjs";
+import fieldsApi from "./fields/index.mjs";
 
 const configsApi = new Hono();
 
@@ -45,7 +47,7 @@ const getConfigs = async (c) => {
 
 /**
  * @openapi
- * /api/v1/users/{uid}/configs/{id}:
+ * /api/v1/users/{uid}/configs/{cid}:
  *   get:
  *     security:
  *       - bearerAuth: []
@@ -109,7 +111,7 @@ const postConfig = async (c) => {
 
 /**
  * @openapi
- * /api/v1/users/{uid}/configs/{id}:
+ * /api/v1/users/{uid}/configs/{cid}:
  *   delete:
  *     security:
  *       - bearerAuth: []
@@ -139,20 +141,17 @@ const deleteConfig = async (c) => {
   return new Response(undefined, { status: 204 });
 };
 
-const configsParamsSchema = z.object({
-  uid: idSchema,
-});
-
-const configParamsSchema = configsParamsSchema.extend({
+const configParamsSchema = z.object({
   cid: idSchema,
 });
 
-configsApi.use("/", zValidator(configsParamsSchema));
 configsApi.get("/", getConfigs);
 configsApi.post("/", postConfig);
 
-configsApi.use("/:cid", zValidator(configParamsSchema));
+configsApi.use("/:cid", zValidator("param", configParamsSchema));
 configsApi.get("/:cid", getConfig);
 configsApi.delete("/:cid", deleteConfig);
+
+configsApi.route("/:cid/fields", fieldsApi);
 
 export default configsApi;

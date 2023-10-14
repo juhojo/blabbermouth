@@ -19,8 +19,6 @@ export const authorization = async (c, next) => {
 
   const user = await UserModel.getRowById(uid);
 
-  console.log("HERE");
-
   if (!user || decodedToken.user.id !== uid) {
     throw new HTTPException(401);
   }

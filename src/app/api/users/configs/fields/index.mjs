@@ -218,27 +218,21 @@ const patchField = async (c) => {
 const deleteField = async (c) => {
   const { fid } = c.req.valid("param");
 
-  await FieldModel.deleteRow(id);
+  await FieldModel.deleteRow(fid);
 
   return new Response(undefined, { status: 204 });
 };
 
-const fieldsParamsSchema = z.object({
-  uid: idSchema,
-  cid: idSchema,
-});
-
-const fieldParamsSchema = fieldsParamsSchema.extend({
+const fieldParamsSchema = z.object({
   fid: idSchema,
 });
 
-fieldsApi.use("/", zValidator(fieldsParamsSchema));
 fieldsApi.get("/", getFields);
-fieldsApi.post("/", zValidator(postFieldBodySchema), postField);
+fieldsApi.post("/", zValidator("json", postFieldBodySchema), postField);
 
-fieldsApi.use("/:fid", zValidator(fieldParamsSchema));
+fieldsApi.use("/:fid", zValidator("param", fieldParamsSchema));
 fieldsApi.get("/:fid", getField);
-fieldsApi.patch("/:fid", zValidator(patchFieldBodySchema), patchField);
+fieldsApi.patch("/:fid", zValidator("json", patchFieldBodySchema), patchField);
 fieldsApi.delete("/:fid", deleteField);
 
 export default fieldsApi;

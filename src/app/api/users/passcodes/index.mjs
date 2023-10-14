@@ -94,15 +94,10 @@ const deletePasscode = async (c) => {
   return new Response(undefined, { status: 204 });
 };
 
-const passcodesParamsSchema = z.object({
-  uid: idSchema,
-});
-
-const passcodeParamsSchema = passcodesParamsSchema.extend({
+const passcodeParamsSchema = z.object({
   pid: idSchema,
 });
 
-passcodesApi.use("/", zValidator("param", passcodesParamsSchema));
 passcodesApi.get("/", getPasscode);
 passcodesApi.post("/", postPasscode);
 

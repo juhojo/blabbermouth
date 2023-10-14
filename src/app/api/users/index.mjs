@@ -1,8 +1,14 @@
 import { Hono } from "hono";
-import { UserModel } from "../../../db/users/index.mjs";
-import { z } from "zod";
+import { jwt } from "hono/jwt";
 import { zValidator } from "@hono/zod-validator";
+import { z } from "zod";
+
+import { UserModel } from "../../../db/users/index.mjs";
 import { idSchema } from "../schema.mjs";
+import passcodesApi from "./passcodes/index.mjs";
+import configsApi from "./configs/index.mjs";
+import { authorization } from "../middleware.mjs";
+import { API_JWT_SECRET } from "../../../config.mjs";
 
 const usersApi = new Hono();
 
@@ -176,17 +182,29 @@ const deleteUser = async (c) => {
   return new Response(undefined, { status: 204 });
 };
 
-const userParamsSchema = z.object({
-  uid: idSchema,
-});
+const userParamsSchema = z
+  .object({
+    uid: idSchema,
+  })
+  .passthrough();
 
 // TODO: Move these two as /admin/ endpoints
 usersApi.get("/", getUsers);
 usersApi.post("/", zValidator("json", postUserBodySchema), postUser);
 
-usersApi.use("/:uid", zValidator("param", userParamsSchema));
+usersApi
+  .use("/:uid/*", zValidator("param", userParamsSchema))
+  .use(
+    jwt({
+      secret: API_JWT_SECRET,
+    })
+  )
+  .use(authorization);
 usersApi.get("/:uid", getUser);
 usersApi.patch("/:uid", zValidator("json", patchUserBodySchema), patchUser);
 usersApi.delete("/:uid", deleteUser);
+
+usersApi.route("/:uid/passcodes", passcodesApi);
+usersApi.route("/:uid/configs", configsApi);
 
 export default usersApi;
