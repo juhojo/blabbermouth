@@ -4,27 +4,22 @@
   "description": "wip",
   "module": "true",
   "main": "src/index.mjs",
-  "scripts": {
-    "dev": "nodemon src/index.mjs",
-    "db:makemigrations": "drizzle-kit generate:sqlite --schema=./src/db/schema.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "keywords": [],
   "author": "Juho Jokela",
   "license": "MIT",
-  "dependencies": {
-    "@hono/node-server": "^1.2.0",
-    "@hono/zod-validator": "^0.1.9",
-    "@paralleldrive/cuid2": "^2.2.2",
-    "better-sqlite3": "^8.7.0",
-    "date-fns": "^2.30.0",
-    "drizzle-orm": "^0.28.6",
-    "hono": "^3.7.4",
-    "nodemon": "^3.0.1",
-    "swagger-jsdoc": "^6.2.8",
-    "zod": "^3.22.4"
+  "scripts": {
+    "dev": "nx run-many --target=dev",
+    "lint": "eslint . --ext js,jsx,mjs --report-unused-disable-directives --max-warnings 0",
+    "format": "prettier . --write"
   },
+  "workspaces": [
+    "packages/client",
+    "apps/backend",
+    "apps/web"
+  ],
   "devDependencies": {
-    "drizzle-kit": "^0.19.13"
+    "eslint": "^8.51.0",
+    "prettier": "3.0.3",
+    "nx": "16.10.0"
   }
 }
