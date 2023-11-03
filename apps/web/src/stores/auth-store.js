@@ -26,13 +26,11 @@ export const getToken = () => useAuthStore.getState().token;
 export const isTokenValid = async () => {
   const { token } = useAuthStore.getState();
 
-  console.log({ token });
   if (!token) {
     return false;
   }
   const { error, data } = await api.isTokenValid(token);
 
-  console.log({ error, data });
   if (error || !data.valid) {
     return false;
   }
