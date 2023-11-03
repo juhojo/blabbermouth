@@ -8,7 +8,7 @@ import { PASSCODE_MAX, PASSCODE_MIN } from "../../../db/schema.mjs";
 import { UserModel } from "../../../db/users/index.mjs";
 import { PasscodeModel } from "../../../db/passcodes/index.mjs";
 import { API_JWT_SECRET } from "../../../config.mjs";
-import { isBefore } from "date-fns";
+import { isAfter } from "date-fns";
 
 const authApi = new Hono();
 
@@ -86,44 +86,47 @@ const logInBodySchema = z.object({
 const logIn = async (c) => {
   const { email, passcode } = c.req.valid("json");
 
-  const user = await UserModel.getRowWithPasscodeByEmail(email);
+  const row = await UserModel.getRowWithPasscodeByEmail(email);
 
   if (
-    !user ||
-    parseInt(passcode, 10) !== user.passcode.value ||
+    !row ||
+    parseInt(passcode, 10) !== row.passcode.value ||
     !PasscodeModel.isActive(passcode)
   ) {
     throw new HTTPException(401);
   }
 
   const nowDate = new Date();
-  const [token, exp] = await createToken(user, nowDate);
+  const [token, exp] = await createToken(row, nowDate);
 
   return c.json(
     {
       token,
       exp,
       user: {
-        id: user.id,
-        email: user.email,
+        id: row.id,
+        email: row.email,
       },
     },
     200,
   );
 };
 
+const validateQuerySchema = z.object({
+  token: z.string(),
+});
+
 /** @param {import('hono').Context} c  */
 const validate = async (c) => {
-  const token = c.req.query("token");
-  const decodedToken = await verify(token, API_JWT_SECRET);
-
-  if (!decodedToken.user || isBefore(new Date(decodedToken.exp), new Date())) {
-    throw new HTTPException(401);
-  }
+  const { token } = c.req.valid("query");
+  const decodedToken = await verify(token, API_JWT_SECRET).catch(() => ({}));
 
   return c.json(
     {
-      valid: true,
+      valid:
+        Boolean(decodedToken.user) &&
+        Boolean(decodedToken.exp) &&
+        isAfter(new Date(decodedToken.exp), new Date()),
     },
     200,
   );
@@ -131,6 +134,6 @@ const validate = async (c) => {
 
 authApi.post("/", zValidator("json", authBodySchema), auth);
 authApi.post("/login", zValidator("json", logInBodySchema), logIn);
-authApi.get("/validate", validate);
+authApi.get("/validate", zValidator("query", validateQuerySchema), validate);
 
 export default authApi;

@@ -5,6 +5,7 @@ Views:
 - /auth: insert email form
   - form submission calls POST /auth, and on success navigates user to /auth/login and sets email as a query parameter
 - /auth/login?email={email}: insert passcode received as email form
+
   - form submission calls POST /auth/login, and on success navigates user to /configs
 
 - /configs: a listview of configs, create a config button

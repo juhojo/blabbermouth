@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "35600ece-0da9-41ec-93ac-1730e45e91b1",
+  "id": "4c3033cb-af25-4b75-94ed-be68a89ccf10",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "configs": {
@@ -12,6 +12,13 @@
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "owner_id": {

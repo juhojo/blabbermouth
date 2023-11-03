@@ -19,10 +19,38 @@ export const useAuthStore = create()(
   ),
 );
 
+export const getUser = () => useAuthStore.getState().user;
+
+export const getToken = () => useAuthStore.getState().token;
+
+export const isTokenValid = async () => {
+  const { token } = useAuthStore.getState();
+
+  console.log({ token });
+  if (!token) {
+    return false;
+  }
+  const { error, data } = await api.isTokenValid(token);
+
+  console.log({ error, data });
+  if (error || !data.valid) {
+    return false;
+  }
+  return true;
+};
+
+export const auth = async (email) => {
+  const { error } = await api.auth(email);
+  return { error };
+};
+
 export const logIn = async (email, passcode) => {
   const { data, error } = await api.logIn(email, passcode);
-  if (error) return;
+  if (error) {
+    return { error };
+  }
   useAuthStore.setState(data);
+  return { error: null };
 };
 
 export const logOut = () => useAuthStore.setState(initialState);

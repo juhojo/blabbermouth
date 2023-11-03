@@ -1,6 +1,4 @@
-import { verify } from "hono/jwt";
 import { HTTPException } from "hono/http-exception";
-import { API_JWT_SECRET } from "../../config.mjs";
 import { UserModel } from "../../db/users/index.mjs";
 import { isBefore } from "date-fns";
 
@@ -14,14 +12,13 @@ import { isBefore } from "date-fns";
  */
 export const authorization = async (c, next) => {
   const params = c.req.param();
-  const bearer = c.req.header("Authorization");
   const uid = parseInt(params.uid, 10);
-  const decodedToken = await verify(bearer.split("Bearer ")[1], API_JWT_SECRET);
+  const decodedToken = c.get("jwtPayload");
 
-  const user = await UserModel.getRowById(uid);
+  const row = await UserModel.getRowById(uid);
 
   if (
-    !user ||
+    !row ||
     decodedToken.user.id !== uid ||
     isBefore(new Date(decodedToken.exp), new Date())
   ) {

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { jwt } from "hono/jwt";
+import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { idSchema } from "../schema.mjs";
@@ -100,14 +101,13 @@ const postUser = async (c) => {
 /** @param {import('hono').Context} c  */
 const getUser = async (c) => {
   const { uid } = c.req.valid("param");
-  const user = await UserModel.getRowById(uid);
+  const row = await UserModel.getRowById(uid);
 
-  return c.json(
-    {
-      item: user,
-    },
-    200,
-  );
+  if (!row) {
+    throw new HTTPException(404);
+  }
+
+  return c.json(row, 200);
 };
 
 /**

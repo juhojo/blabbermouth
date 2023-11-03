@@ -32,6 +32,10 @@ export const passcodes = sqliteTable("passcodes", {
 
 export const configs = sqliteTable("configs", {
   id: integer("id").primaryKey(),
+  // TODO: Add CHECK constraints when `drizzle-kit` supports it
+  // (two configs can not have the same name if they belong to the same user)
+  // see: https://github.com/drizzle-team/drizzle-orm/issues/310
+  name: text("name"),
   ownerId: integer("owner_id").references(() => users.id, {
     onDelete: "cascade",
   }),

@@ -1,5 +1,6 @@
 CREATE TABLE `configs` (
 	`id` integer PRIMARY KEY NOT NULL,
+	`name` text,
 	`owner_id` integer,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade

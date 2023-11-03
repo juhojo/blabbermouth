@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { FieldModel } from "../../../../../db/fields/index.mjs";
@@ -41,7 +42,7 @@ const getFields = async (c) => {
 
   return c.json(
     {
-      rows,
+      items: rows,
       count,
     },
     200,
@@ -81,12 +82,11 @@ const getField = async (c) => {
 
   const row = await FieldModel.getRowById(fid);
 
-  return c.json(
-    {
-      row,
-    },
-    200,
-  );
+  if (!row) {
+    throw new HTTPException(404);
+  }
+
+  return c.json(row, 200);
 };
 
 /**

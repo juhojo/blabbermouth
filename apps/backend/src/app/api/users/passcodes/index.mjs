@@ -29,9 +29,9 @@ const passcodesApi = new Hono();
 const getPasscode = async (c) => {
   const { uid } = c.req.valid("param");
 
-  const item = await PasscodeModel.getRowByUserId(uid);
+  const row = await PasscodeModel.getRowByUserId(uid);
 
-  return c.json({ item }, 200);
+  return c.json({ item: row }, 200);
 };
 
 /**

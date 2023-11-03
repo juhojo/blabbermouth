@@ -1,8 +1,7 @@
 import axios from "axios";
+import { getToken, getUser } from "./stores/auth-store";
 
-// TODO: load as a vite env variable
-// see: https://vitejs.dev/guide/env-and-mode.html#env-variables-and-modes
-axios.defaults.baseURL = "http://localhost:3000/api/v1";
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL;
 
 /**
  * Wraps axios requests and handles errors
@@ -12,10 +11,12 @@ axios.defaults.baseURL = "http://localhost:3000/api/v1";
  */
 const axiosRequestWrapper = async (fn) => {
   try {
-    const { data } = await fn();
-    return { data, error: null };
+    const {
+      data,
+      config: { method, url },
+    } = await fn();
+    return { data, error: null, request: { method, url } };
   } catch (e) {
-    console.log(e);
     if (axios.isAxiosError(e)) {
       return {
         data: null,
@@ -37,6 +38,10 @@ const axiosRequestWrapper = async (fn) => {
 };
 
 const api = {
+  isNotFound(error) {
+    return error && error.status === 404;
+  },
+
   async isTokenValid(token) {
     return axiosRequestWrapper(() =>
       axios.get("/auth/validate", {
@@ -71,6 +76,124 @@ const api = {
       axios.post("/auth/login", {
         email,
         passcode,
+      }),
+    );
+  },
+
+  async getConfigs() {
+    const user = getUser();
+    const token = getToken();
+    return axiosRequestWrapper(() =>
+      axios.get(`/users/${user.id}/configs`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+    );
+  },
+
+  async getConfig(configId) {
+    const user = getUser();
+    const token = getToken();
+    return axiosRequestWrapper(() =>
+      axios.get(`/users/${user.id}/configs/${configId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+    );
+  },
+
+  async createConfig(name) {
+    const user = getUser();
+    const token = getToken();
+    return axiosRequestWrapper(() =>
+      axios.post(
+        `/users/${user.id}/configs`,
+        { name },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      ),
+    );
+  },
+
+  async updateConfig(configId, name) {
+    const user = getUser();
+    const token = getToken();
+    return axiosRequestWrapper(() =>
+      axios.patch(
+        `/users/${user.id}/configs/${configId}`,
+        { name },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      ),
+    );
+  },
+
+  async deleteConfig(configId) {
+    const user = getUser();
+    const token = getToken();
+    return axiosRequestWrapper(() =>
+      axios.delete(`/users/${user.id}/configs/${configId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+    );
+  },
+
+  async createField(configId, key, value) {
+    const user = getUser();
+    const token = getToken();
+    return axiosRequestWrapper(() =>
+      axios.post(
+        `/users/${user.id}/configs/${configId}/fields`,
+        {
+          key,
+          value,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      ),
+    );
+  },
+
+  async updateField(configId, fieldId, key, value) {
+    const user = getUser();
+    const token = getToken();
+    return axiosRequestWrapper(() =>
+      axios.patch(
+        `/users/${user.id}/configs/${configId}/fields/${fieldId}`,
+        {
+          key,
+          value,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      ),
+    );
+  },
+
+  async deleteField(configId, fieldId) {
+    const user = getUser();
+    const token = getToken();
+    return axiosRequestWrapper(() =>
+      axios.delete(`/users/${user.id}/configs/${configId}/fields/${fieldId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }),
     );
   },

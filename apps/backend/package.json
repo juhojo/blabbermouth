@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "nodemon src/index.mjs",
+    "preview": "nodemon src/index.mjs",
     "db:makemigrations": "drizzle-kit generate:sqlite --schema=./src/db/schema.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

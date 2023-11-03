@@ -32,6 +32,8 @@ export const ConfigModel = {
   async getRowById(id) {
     return await db.query.configs.findFirst({
       where: eq(configs.id, id),
+      // TODO: Add count aggregate when supported
+      // see: https://orm.drizzle.team/docs/rqb#include-custom-fields
       with: { key: true, fields: true },
     });
   },
@@ -40,13 +42,25 @@ export const ConfigModel = {
    * Create a row (and a key for the row)
    *
    * @param {number} ownerId
+   * @param {string} name
    * @returns
    */
-  async createRow(ownerId) {
+  async createRow(ownerId, name) {
     const config = (
-      await db.insert(configs).values({ ownerId }).returning()
+      await db.insert(configs).values({ ownerId, name }).returning()
     )[0];
     await db.insert(keys).values({ configId: config.id });
+  },
+
+  /**
+   * Update a row
+   *
+   * @param {number} id
+   * @param {string} name
+   * @returns
+   */
+  async updateRow(id, name) {
+    await db.update(configs).set({ name }).where(eq(configs.id, id));
   },
 
   /**

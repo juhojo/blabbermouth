@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { ConfigModel } from "../../../../db/configs/index.mjs";
@@ -70,14 +71,13 @@ const getConfigs = async (c) => {
 /** @param {import('hono').Context} c  */
 const getConfig = async (c) => {
   const { cid } = c.req.valid("param");
-  const item = await ConfigModel.getRowById(cid);
+  const row = await ConfigModel.getRowById(cid);
 
-  return c.json(
-    {
-      item,
-    },
-    200,
-  );
+  if (!row) {
+    throw new HTTPException(404);
+  }
+
+  return c.json(row, 200);
 };
 
 /**
@@ -94,18 +94,78 @@ const getConfig = async (c) => {
  *         in: path
  *         description: User ID.
  *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
  *     responses:
  *       201:
  *         $ref: '#/components/responses/EmptyResponse'
  */
 
+const postConfigBodySchema = z.object({
+  name: z.string().min(2).max(32),
+});
+
 /** @param {import('hono').Context} c  */
 const postConfig = async (c) => {
   const { uid } = c.req.valid("param");
+  const { name } = await c.req.valid("json");
 
-  await ConfigModel.createRow(uid);
+  await ConfigModel.createRow(uid, name);
 
   return c.json({}, 201);
+};
+
+/**
+ * @openapi
+ * /api/v1/users/{uid}/configs/{cid}:
+ *   patch:
+ *     security:
+ *       - bearerAuth: []
+ *     tags:
+ *       - configs
+ *     description: Create a config.
+ *     parameters:
+ *       - name: uid
+ *         in: path
+ *         description: User ID.
+ *         required: true
+ *       - name: cid
+ *         in: path
+ *         description: Config ID.
+ *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         $ref: '#/components/responses/EmptyResponse'
+ */
+
+const patchConfigBodySchema = z.object({
+  name: z.string().min(2).max(32),
+});
+
+/** @param {import('hono').Context} c  */
+const patchConfig = async (c) => {
+  const { cid } = c.req.valid("param");
+  const { name } = await c.req.valid("json");
+
+  await ConfigModel.updateRow(cid, name);
+
+  return c.json({}, 200);
 };
 
 /**
@@ -150,10 +210,15 @@ const configParamsSchema = configsParamsSchema.extend({
 
 configsApi.use("/", zValidator("param", configsParamsSchema));
 configsApi.get("/", getConfigs);
-configsApi.post("/", postConfig);
+configsApi.post("/", zValidator("json", postConfigBodySchema), postConfig);
 
 configsApi.use("/:cid", zValidator("param", configParamsSchema));
 configsApi.get("/:cid", getConfig);
+configsApi.patch(
+  "/:cid",
+  zValidator("json", patchConfigBodySchema),
+  patchConfig,
+);
 configsApi.delete("/:cid", deleteConfig);
 
 configsApi.route("/:cid/fields", fieldsApi);
