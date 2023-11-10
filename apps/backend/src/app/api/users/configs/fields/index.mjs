@@ -124,7 +124,7 @@ const getField = async (c) => {
  */
 
 const postFieldBodySchema = z.object({
-  key: z.string().regex(/[a-zA-Z0-9_]/),
+  key: z.string().regex(/^[a-zA-Z0-9_]+$/),
   value: z.string(),
 });
 

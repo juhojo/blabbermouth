@@ -17,12 +17,12 @@ export const authorization = async (c, next) => {
 
   const row = await UserModel.getRowById(uid);
 
-  if (
-    !row ||
-    decodedToken.user.id !== uid ||
-    isBefore(new Date(decodedToken.exp), new Date())
-  ) {
+  if (!row || isBefore(new Date(decodedToken.exp), new Date())) {
     throw new HTTPException(401);
+  }
+
+  if (decodedToken.user.id !== uid) {
+    throw new HTTPException(403);
   }
 
   await next();
