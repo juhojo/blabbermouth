@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useFetcher } from "react-router-dom";
 import { Button } from "../../atoms/Button";
 import { Pencil, Trash } from "../../tokens";
-import { Input } from "../../atoms/Input";
 import { Typography } from "../../atoms/Typography";
+import { InputField } from "../InputField/InputField";
 
 /**
  * ListItem
@@ -25,7 +25,7 @@ import { Typography } from "../../atoms/Typography";
  *    autoFocus?: boolean,
  *    name: string,
  *    value: *,
- *    disabled?: boolean,
+ *    readOnly?: boolean,
  *  }[],
  *  getText: (fetcher: import("react-router-dom").FetcherWithComponents<any>) => string
  * }} props
@@ -72,20 +72,22 @@ export const ListItem = ({ item, inputs, getText }) => {
     <li className="flex justify-between px-3 py-1">
       {showEditForm ? (
         <fetcher.Form
-          className="flex w-full justify-between gap-4"
+          className="flex flex-col w-full justify-between gap-3 my-2"
           method="patch"
           action={`${item.actions.patch}`}
         >
           {inputs?.map((input) => (
-            <Input
+            <InputField
               key={input.name}
               ref={input.autoFocus ? inputRef : null}
               name={input.name}
+              label={input.name}
+              issues={fetcher.data?.error?.issues?.[input.name]}
               defaultValue={input.value}
-              disabled={input.disabled}
+              readOnly={input.readOnly}
             />
           ))}
-          <div className="flex gap-2 justify-self-end">
+          <div className="flex gap-2 justify-end items-end">
             <Button type="button" onClick={handleEditClick} variant="text">
               cancel
             </Button>

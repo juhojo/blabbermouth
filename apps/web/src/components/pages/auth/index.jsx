@@ -1,19 +1,22 @@
 import { Form, useActionData, useNavigation } from "react-router-dom";
-import { Input } from "../../atoms/Input";
 import { Button } from "../../atoms/Button";
 import { Typography } from "../../atoms/Typography";
+import { InputField } from "../../molecules/InputField/InputField";
 
-function Auth() {
+export const Auth = () => {
   const actionData = useActionData();
   const navigation = useNavigation();
+
   return (
     <Form method="post" action="/auth">
       <Typography level="h2">Send log in code</Typography>
       <div className="grid grid-cols-1 gap-2 mb-2 justify-between items-center">
-        <label className="flex flex-col">
-          <Typography level="sm">email</Typography>
-          <Input type="email" name="email" />
-        </label>
+        <InputField
+          label="email"
+          issues={actionData?.error?.issues?.email}
+          name="email"
+          type="email"
+        />
       </div>
       <div className="flex justify-end">
         <Button
@@ -24,9 +27,6 @@ function Auth() {
           Send
         </Button>
       </div>
-      {actionData?.error && <p>{actionData?.error.message}</p>}
     </Form>
   );
-}
-
-export default Auth;
+};

@@ -1,10 +1,18 @@
-import { Outlet } from "react-router";
+import { Outlet, redirect } from "react-router";
 import { useFetcher } from "react-router-dom";
 import { Button } from "../../atoms/Button";
 import { Typography } from "../../atoms/Typography";
 import { LogOut } from "../../tokens";
+import { isTokenValid } from "../../../stores/auth-store";
 
-function LoggedInLayout() {
+export const LoggedInLayoutLoader = async () => {
+  if (!(await isTokenValid())) {
+    throw redirect("/auth");
+  }
+  return null;
+};
+
+export const LoggedInLayout = () => {
   const fetcher = useFetcher();
 
   return (
@@ -29,6 +37,4 @@ function LoggedInLayout() {
       </div>
     </div>
   );
-}
-
-export default LoggedInLayout;
+};

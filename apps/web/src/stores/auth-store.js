@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import api from "../api";
+import { z } from "zod";
+import api, { validatedApiCall } from "../api";
 
 const initialState = {
   token: undefined,
@@ -29,25 +30,55 @@ export const isTokenValid = async () => {
   if (!token) {
     return false;
   }
+
   const { error, data } = await api.isTokenValid(token);
 
   if (error || !data.valid) {
     return false;
   }
+
   return true;
 };
 
-export const auth = async (email) => {
-  const { error } = await api.auth(email);
+export const auth = async (data) => {
+  const { error } = await validatedApiCall(
+    api.auth,
+    z.object({
+      email: z.string().email(),
+    }),
+  )(data);
+
   return { error };
 };
 
-export const logIn = async (email, passcode) => {
-  const { data, error } = await api.logIn(email, passcode);
+export const logIn = async ({ email, passcode }) => {
+  const { data, error } = await validatedApiCall(
+    api.logIn,
+    z.object({
+      email: z.string().email(),
+      passcode: z.string().transform((value, ctx) => {
+        const parsed = parseInt(value, 10);
+
+        if (isNaN(parsed) || parsed <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Not an ID",
+          });
+
+          return z.NEVER;
+        }
+
+        return parsed;
+      }),
+    }),
+  )({ email, passcode });
+
   if (error) {
     return { error };
   }
+
   useAuthStore.setState(data);
+
   return { error: null };
 };
 

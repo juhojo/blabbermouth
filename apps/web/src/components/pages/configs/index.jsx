@@ -1,13 +1,40 @@
 import { useRef } from "react";
-import { useLoaderData } from "react-router";
+import { redirect, useLoaderData } from "react-router";
 import { useFetcher } from "react-router-dom";
+import { z } from "zod";
 import { Typography } from "../../atoms/Typography";
 import { Button } from "../../atoms/Button";
-import { Input } from "../../atoms/Input";
 import { ListItem } from "../../molecules/ListItem";
+import { InputField } from "../../molecules/InputField/InputField";
 import { List } from "../../organisms/List/List";
+import { isTokenValid } from "../../../stores/auth-store";
+import api, { validatedApiCall } from "../../../api";
 
-function Configs() {
+export const ConfigsLoader = async () => {
+  if (!(await isTokenValid())) {
+    throw redirect("/auth");
+  }
+  const { data, error } = await api.getConfigs();
+  return { data, error };
+};
+
+export const ConfigsAction = async ({ request }) => {
+  switch (request.method) {
+    case "POST":
+      const data = Object.fromEntries(await request.formData());
+
+      return await validatedApiCall(
+        api.createConfig,
+        z.object({
+          name: z.string().min(2, "Name must be 2 or more characters long"),
+        }),
+      )(data);
+    default:
+      return null;
+  }
+};
+
+export const Configs = () => {
   const listHeadingRef = useRef();
   const fetcher = useFetcher();
   const { data, error } = useLoaderData();
@@ -23,10 +50,12 @@ function Configs() {
         <fetcher.Form method="post">
           <Typography level="h2">create a config</Typography>
           <div className="grid grid-cols-1 gap-2 mb-2 justify-between items-center">
-            <label className="flex flex-col">
-              <Typography level="sm">name</Typography>
-              <Input name="name" type="text" />
-            </label>
+            <InputField
+              label="name"
+              issues={fetcher.data?.error?.issues?.name}
+              name="name"
+              type="text"
+            />
             <div className="flex justify-end">
               <Button type="submit" variant="outlined">
                 create
@@ -71,6 +100,4 @@ function Configs() {
       </div>
     </div>
   );
-}
-
-export default Configs;
+};
